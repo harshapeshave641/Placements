@@ -1,6 +1,7 @@
 import React, { useEffect,useState } from 'react'
 import { useLocation,Link } from 'react-router-dom'
 import { Button,Label,TextInput } from 'flowbite-react';
+import { FaLinkedin } from 'react-icons/fa';
 
 export default function CompanyRegister() {
   return (
@@ -69,11 +70,13 @@ export default function CompanyRegister() {
             </form>
             <div className="flex-1 justify-center space-y-2">
               {/* <h1>OR</h1> */}
-              <Button className='bg-blue-200 text-black ml-[46%] hover:bg-white '>Register</Button>
+              <Button className=' ml-[46%] max-w-[500px]' gradientDuoTone='pinkToOrange' outline>Register</Button>
             </div>
             <div className="flex-1 justify-center space-y-2">
               <h1>OR</h1>
-              <Button className='bg-blue-200 text-black ml-[42%] hover:bg-white '>Continue with Linkdin</Button>
+              <Button className=' ml-[42%] max-w-[500px]' gradientDuoTone='pinkToOrange' outline>
+              <FaLinkedin className='w-4 h-4 mr-2'/>
+                Continue with Linkdin</Button>
             </div>
             <div className="flex gap-2 justify-center">
               <p >Already have an account?</p>
