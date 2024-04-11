@@ -76,25 +76,32 @@ def login():
     if request.method == "POST":
         try:
             data = request.json
-            name = data.get('Company name')
-            password = data.get('Password')
+            email = data.get('email')
+            password = data.get('password')
+            print(email,password)
+            if not email or not password:
+                return jsonify({"message": "Missing credentials"}), 400
 
-            if not name or not password:
-                return jsonify({"status": "Missing credentials"}), 400
-
-            company = db.company.find_one({"Company name": name})
+            company = db.company.find_one({"email": email})
 
             if not company:
                 return jsonify({"status": "Company not found"}), 404
 
-            if bcrypt.check_password_hash(company['Password'], password):
+            if bcrypt.check_password_hash(company['password'], password):
                 token = create_access_token(identity=str(company["_id"]))
-                return jsonify({"status": f"Logged in as {name}", "token": token}), 200
+                return jsonify({"message": f"Logged in as {email}", "token": token}), 200
             else:
-                return jsonify({"status": "Invalid credentials"}), 401
+                return jsonify({"message": "Invalid credentials"}), 401
 
         except Exception as e:
-            return jsonify({"status": "Error", "error_message": str(e)}), 500
+            return jsonify({"message": "Error", "error_message": str(e)}), 500
+    
+    if request.method=="OPTIONS":
+        response = make_response('Login successful')
+        response.headers['Access-Control-Allow-Origin'] = 'http://localhost:5173'
+        response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
 
 
 
@@ -128,7 +135,7 @@ def check(a,b):
         return jsonify({"status":"Student not found"})
     
 @app.route('/post', methods=["POST"])
-@jwt_required()
+# @jwt_required()
 def add_job():
     data = request.json
 
@@ -150,9 +157,9 @@ def add_job():
 
    
     job_name = data['Name']
-    if job_name in c['Jobs']:
+    if job_name in c['jobs']:
         return jsonify({"status": "Job with the same name already exists"}), 400
-    c['Jobs'][job_name] = {
+    c['jobs'][job_name] = {
         'Student_count': data['Student_count'],
         'Salary(LPA)': data['Salary(LPA)'],
         'Tech': data['Tech'],
@@ -161,7 +168,7 @@ def add_job():
     }
 
     
-    db.company.update_one({"_id": ObjectId(company_id)}, {"$set": {"Jobs": c['Jobs']}})
+    db.company.update_one({"_id": ObjectId(company_id)}, {"$set": {"jobs": c['jobs']}})
 
     return jsonify({"status": "Job added successfully"}), 201
 
@@ -180,12 +187,12 @@ def add_job():
 def login_admin():
     if request.method=="POST":
         data=request.json
-        name=data["Admin name"]
-        password=data['Password']
+        name=data["name"]
+        password=data['password']
         if not name or not password:
             return jsonify({"status":"Missing fields"})
         sample=db.admin.find_one({"Admin name":name})
-        if sample or bcrypt.check_password_hash(sample["Password"],password):
+        if sample and bcrypt.check_password_hash(sample["Password"],password):
             token=create_access_token(identity=str(sample["_id"]))
             return jsonify({"status":f"Logged in as {name}",
                             "token":token})
@@ -194,7 +201,48 @@ def login_admin():
 
 
 
+@app.route('/register-company', methods=['POST'])
+def register_company():
+    data = request.json
+    company_name = data.get('name')
+    username = data.get('username')
+    drive = data.get('drive')
+    email = data.get('email')
+    password = data.get('password')
+    confirm = data.get('confirm')
 
+    if not all([company_name, username, drive, email, password, confirm]):
+        return jsonify({'message': 'All parameters are required'}), 400
+
+    if db.company.find_one({'username': username}):
+        return jsonify({'message': 'Username already exists'}), 400
+
+    # Check if the email already exists
+    if db.company.find_one({'email': email}):
+        return jsonify({'message': 'Email already exists'}), 400
+
+    # Check if password and confirm fields match
+    if password != confirm:
+        return jsonify({'message': 'Password and confirm fields do not match'}), 400
+
+    # Hash the password
+    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    # Create an empty jobs dictionary
+    jobs = {}
+
+    # Insert the new company into the database
+    company = {
+        'companyName': company_name,
+        'username': username,
+        'drive': drive,
+        'email': email,
+        'password': hashed_password,  # Storing the hashed password as string
+        'jobs': jobs
+    }
+    db.company.insert_one(company)
+
+    return jsonify({'message': 'Company registered successfully'}), 201
 @app.route('/register/company', methods=['POST'])
 def register():
     if request.method == 'POST':
@@ -301,7 +349,7 @@ def update():
     
 
 @app.route('/companies', methods=['GET'])
-@jwt_required()
+# @jwt_required()
 def give():
     if request.method == 'GET':
         companies = list(db.company.find())
@@ -374,22 +422,23 @@ def up():
 
 
 
-@app.route('/single',methods=["GET"])
-@jwt_required()
-def show():
+@app.route('/single/<string:company_id>',methods=["GET"])
+# @jwt_required()
+def show(company_id):
     if request.method=="GET":
-        current_user_id=get_jwt_identity()
+        print(company_id)
+        current_user_id=company_id
         current_user=db.company.find_one({"_id":ObjectId(current_user_id)})
         if current_user:
             current_user['_id'] = str(current_user['_id'])
             user_info = {
-                "Company name": current_user.get("Company name"),
-                "Drive mode": current_user.get("Drive mode"),
-                "Jobs":current_user.get("Jobs")
+                "Company_name": current_user.get("companyName"),
+                "Drive_mode": current_user.get("drive"),
+                "Jobs":current_user.get("jobs")
             }
             return jsonify({
                 "status":"success",
-                "User info":user_info,
+                "Userinfo":user_info,
                 "token":current_user_id
             })
         else:
