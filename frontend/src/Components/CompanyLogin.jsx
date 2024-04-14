@@ -30,8 +30,11 @@ export default function CompanyLogin() {
       // Check if response status is OK
       if (response.status === 200) {
         // Handle successful login
-        console.log(response.data);
+        sessionStorage.setItem('jwtToken', response.data.token);
+
+        console.log(response.data.token);
         window.location.href="/companyhome"
+      
       }
     } catch (error) {
       
