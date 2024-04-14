@@ -7,6 +7,8 @@ from flask_jwt_extended import JWTManager, jwt_required, create_access_token, ge
 from bson import ObjectId
 from bson.regex import Regex
 import re
+import jwt
+from functools import wraps
 
 import certifi
 ca = certifi.where()
@@ -58,15 +60,26 @@ def add():
         db.company.insert_one(user_dict)
         return jsonify({"status": "Data inserted successfully"})
     
-def admin_required(fn):
-    def wrapper(*args, **kwargs):
-        verify_jwt_in_request()  
-        current_user = get_jwt_identity()
-        if current_user.get('role') == 'admin':
-            return fn(*args, **kwargs)
-        else:
-            return jsonify({"status": "Unauthorized"}), 401
-    return wrapper
+from flask import request, jsonify
+from functools import wraps
+import jwt
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
+        try:
+            data = jwt.decode(token, app.config['12he32dv32dggo2dd2dv2v'])
+        except:
+            return jsonify({'message': 'Token is invalid!'}), 401
+
+        return f(*args, **kwargs)
+
+    return decorated
+
 
 from flask import jsonify
 
@@ -135,43 +148,48 @@ def check(a,b):
         return jsonify({"status":"Student not found"})
     
 @app.route('/post', methods=["POST"])
-# @jwt_required()
+@jwt_required()
 def add_job():
     data = request.json
-
-    
-    required_fields = ['Name', 'Student_count', 'Salary(LPA)', 'Tech', 'Eligibility', 'Branches']
-    if not all(field in data for field in required_fields):
+    print("++++++++++++++")
+    print(data)
+    required_fields = ['jobTitle', 'companyName', 'driveMode', 'studentCount', 'salaryLPA', 'tech', 'eligibilityCGPA', 'eligibilityAmcat', 'eligibilityBack', 'branches','applicationDeadline','jobDescription']
+    print(required_fields)
+    if not all(field in data['formData'] for field in required_fields):
+        print("Inside if")
         return jsonify({"status": "Missing required fields"}), 400
-
-    
-    company_id =get_jwt_identity()
-    if not company_id:
-        return jsonify({"status": "Company ID is required"}), 400
-    print(company_id)
-
-    
-    c = db.company.find_one({"_id": ObjectId(company_id)})
+    print(data['formData']['companyName'])
+    current_id=get_jwt_identity()
+    # c = db.company.find_one({"companyName": data['formData']['companyName']})
+    c=db.company.find_one({"_id":ObjectId(current_id)})
+    #c = db.company.find_one({"companyName": "Sample Company"})
+    print(c)
     if not c:
         return jsonify({"status": "Company not found"}), 404
 
-   
-    job_name = data['Name']
-    if job_name in c['jobs']:
-        return jsonify({"status": "Job with the same name already exists"}), 400
-    c['jobs'][job_name] = {
-        'Student_count': data['Student_count'],
-        'Salary(LPA)': data['Salary(LPA)'],
-        'Tech': data['Tech'],
-        'Eligibility': data['Eligibility'],
-        'Branches': data['Branches']
+    elig = {
+        "CGPA": data['formData']['eligibilityCGPA'],
+        "Amcat": data['formData']['eligibilityAmcat'],
+        "Back": data['formData']['eligibilityBack']
     }
 
+    job_name = data['formData']['jobTitle']
+    print(job_name)
+    if job_name in c['jobs']:
+        return jsonify({"status": "Job with the same name already exists"}), 400
     
+    c['jobs'][job_name] = {
+        'Student_count': data['formData']['studentCount'],
+        'Salary(LPA)': data['formData']['salaryLPA'],
+        'Tech': data['formData']['tech'],
+        'Eligibility': elig,
+        'Branches': data['formData']['branches']
+    }
+
+    company_id = c["_id"]
     db.company.update_one({"_id": ObjectId(company_id)}, {"$set": {"jobs": c['jobs']}})
-
+    print("After update")
     return jsonify({"status": "Job added successfully"}), 201
-
 
 
 
@@ -321,8 +339,30 @@ def delete_company():
 
         except Exception as e:
             return jsonify({"status": f"Error occurred: {str(e)}"}), 500
+
+from urllib.parse import unquote
+
+@app.route('/delete/<string:jobTitle>',methods=['DELETE'])
+@jwt_required()
+def dojo(jobTitle):
+    if request.method=="DELETE":
+        id=get_jwt_identity()
+        decoded_job_title = unquote(jobTitle)
+        modified_job_title = decoded_job_title.replace('%20', ' ')
+        c=db.company.find_one({"_id":ObjectId(id)})
+        if c:
+            for i in c['jobs']:
+                if i==modified_job_title:
+                    d=c['jobs']
+
+                    del d[modified_job_title]
+                    
+                    db.company.update_one({"_id": ObjectId(id)}, {"$set": {"jobs": d}})
+
+                    return jsonify({"message":"Deleletd successfully"})
+                
         
-        
+
 
 
 
@@ -346,10 +386,15 @@ def update():
         }})
         return jsonify({"status": "Data successfully updated"})
 
-    
+# @app.route('/studis',methods=['GET'])
+# @jwt_required()
+# def disp():
+#     if request.method=='GET':
+#         c=db.company_applications.find()
+        
 
 @app.route('/companies', methods=['GET'])
-# @jwt_required()
+@jwt_required()
 def give():
     if request.method == 'GET':
         companies = list(db.company.find())
@@ -423,7 +468,7 @@ def up():
 
 
 @app.route('/single/<string:company_id>',methods=["GET"])
-# @jwt_required()
+@jwt_required()
 def show(company_id):
     if request.method=="GET":
         print(company_id)
@@ -444,7 +489,36 @@ def show(company_id):
         else:
             return jsonify({"status":"Login required"})
 
+@app.route('/single1',methods=["GET"])
+@jwt_required()
+def show1():
+    if request.method=="GET":
+        company_id=get_jwt_identity()
+        print(company_id)
+        current_user_id=company_id
+        current_user=db.company.find_one({"_id":ObjectId(current_user_id)})
+        if current_user:
+            current_user['_id'] = str(current_user['_id'])
+            user_info = {
+                "Company_name": current_user.get("companyName"),
+                "Drive_mode": current_user.get("drive"),
+                "Jobs":current_user.get("jobs")
+            }
+            return jsonify({
+                "status":"success",
+                "Userinfo":user_info,
+                "token":current_user_id
+            })
+        else:
+            return jsonify({"status":"Login required"})
 
+@app.route('/name',methods=["GET"])
+@jwt_required()
+def name():
+    if request.method=="GET":
+        id=get_jwt_identity()
+        c=db.company.find_one({"_id":ObjectId(id)})
+        return jsonify({"name":c["companyName"]})
 @app.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
