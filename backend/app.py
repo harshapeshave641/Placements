@@ -217,7 +217,16 @@ def login_admin():
         else:
             return jsonify({"status":"Credentials do not match"})
 
-
+@app.route('/studs', methods=['GET'])
+# @jwt_required()
+def stud():
+    if request.method == "GET":
+        c = db.users.find({}, {"_id": 0, "MIS_ID": 1})  # Exclude _id field and include only MIS_ID field
+        mis_ids = [student["MIS_ID"] for student in c]  # Extract MIS_ID from each student
+        return jsonify({
+            "Message": "Success",
+            "Students": mis_ids
+        })
 
 @app.route('/register-company', methods=['POST'])
 def register_company():

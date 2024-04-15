@@ -16,6 +16,7 @@ import { useState } from 'react'
 import Statistics from './pages/Statistics' 
 import PermanentDrawer from './Components/Admin_Dashboard'
 import Profile1 from './pages/profile1'
+import StudentListPage from './pages/Students'
 
 
 function App() {
@@ -36,8 +37,7 @@ function App() {
           <Route path='/companies' element={<CompanyList/>}></Route>
           <Route path='/single/:companyId' element={<Profile1/>}></Route>
           <Route path='/single1' element={<Profile/>}></Route>
-
-        
+          <Route path='/students' element={<StudentListPage/>}></Route>
           <Route path='/dev' element={<StickyScrollRevealDemo/>}></Route>
           {/* <Route path='/activejobopenings' element={<ActiveJobOpenings jobPosts={jobPosts} setJobPosts={setJobPosts} />} /> */}
           <Route path='/stat' element={<Statistics/>}></Route> 

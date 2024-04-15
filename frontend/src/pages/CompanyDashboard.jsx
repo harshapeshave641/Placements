@@ -791,6 +791,8 @@ export default function CompanyLanding({ jobPosts, setJobPosts }) {
                                     Profile
                                 </Sidebar.Item>
                             </Link>
+                            
+                            
                             <Button onClick={handleLogout}>
                             <Sidebar.Item icon={FaLocationArrow} label="logout" labelColor="light">
                             Logout

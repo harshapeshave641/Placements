@@ -26,6 +26,19 @@ const Profile1 = () => {
 
     fetchCompanyDetails();
   }, [companyId, token]);
+  const handleDelete = async (jobTitle) => {
+    try {
+       const name=encodeURIComponent(jobTitle)
+      const response = await axios.delete(`http://127.0.0.1:5000/delete/${name}`, {
+        headers: {
+          Authorization: `Bearer ${token}` 
+        }
+      });
+      console.log('Item deleted successfully');
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    }
+  };
 
   if (!company) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -37,7 +50,7 @@ const Profile1 = () => {
         <PermanentDrawer />
       </div>
       <div className="ml-64 bg-gray-100 min-h-screen px-4 py-8">
-      <Link to="/companyhome" className="text-sm bg-black hover:bg-blue-600 text-white font-semibold py-1 px-4 mr-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <Link to="/companies" className="text-sm bg-black hover:bg-blue-600 text-white font-semibold py-1 px-4 mr-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
   Back
 </Link>
         <div className="container mx-auto max-w-7xl">
@@ -61,11 +74,11 @@ const Profile1 = () => {
                       <li>Backlog: {jobData.Eligibility.Back}</li>
                     </ul>
                     <p className="text-gray-600 mb-1">Branches: {jobData.Branches}</p>
-                    <button className="text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-4 mr-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      Update
-                    </button>
-                    <button className="text-sm bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      Delete
+                    <Link  to='/students'className="text-sm bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-4 mr-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      Applied students
+                    </Link>
+                    <button className="text-sm bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      View Report
                     </button>
                   </div>
                 ))}

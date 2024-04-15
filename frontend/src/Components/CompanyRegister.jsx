@@ -27,18 +27,25 @@ export default function CompanyRegister() {
       
       // Handle response from the server (e.g., registration success or failure)
       console.log(response.data);
-      // window.location.href='/company'
+      window.location.href='/company'
     } catch (error) {
       
       if (error.response) {
         
         console.log(error.response.data);
+        alert(error.response.data)
+        alert(response.data.status)
+        alert("Error")
         console.log(error.response.status);
         console.log(error.response.headers);
+        
       } else if (error.request) {
         console.log(error.request);
+        alert("Error")
+
+        alert(error.request)
       } else {
-        console.log('Error', error.message);
+        alert('Error', error.message);
       }
     }
   };

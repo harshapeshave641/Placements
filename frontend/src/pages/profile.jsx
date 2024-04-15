@@ -38,6 +38,19 @@ const Profile = () => {
       console.error('Error deleting item:', error);
     }
   };
+  const handleUpdate = async (jobTitle) => {
+    try {
+       const name=encodeURIComponent(jobTitle)
+      const response = await axios.get(`http://127.0.0.1:5000/title/${name}`, {
+        headers: {
+          Authorization: `Bearer ${token}` 
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    }
+  };
 
   if (!company) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -75,11 +88,11 @@ const Profile = () => {
                   >
                     Delete
                   </button>
-                  <button 
+                  <Link to='/students'
                     className="text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    Update
-                  </button>
+                    Applied students
+                  </Link>
                 </div>
               ))}
             </div>

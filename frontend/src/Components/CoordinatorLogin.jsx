@@ -21,7 +21,7 @@ export default function CoordinatorLogin() {
             if (response.status === 200) {
 
                 sessionStorage.setItem('jwtToken', response.data.token);
-
+                window.location.href="/companies"
                 console.log(response.data.token)
                 // localStorage.setItem('token', responsetoken);
             } 

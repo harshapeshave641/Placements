@@ -77,6 +77,7 @@ const PermanentDrawer = () => {
             </ListItem>
           ))}
         </List>
+        
         <Button onClick={handleLogout}>
         Logout
       </Button>
