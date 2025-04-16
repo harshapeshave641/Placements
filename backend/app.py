@@ -539,7 +539,126 @@ def logout():
 
         except Exception as e:
             return jsonify({"status": f"Error occurred: {str(e)}"}), 500
-        
+
+
+from collections import defaultdict
+from datetime import datetime
+@app.route('/analytics', methods=['GET'])
+def job_analytics():
+    if request.method == "GET":
+        try:
+            companies_cursor = db.company.find()
+            companies = list(companies_cursor)  # Convert cursor to list
+            
+            analytics_data = {
+                'total_companies': len(companies),
+                'total_jobs': 0,
+                'jobs_per_company': [],
+                'salary_distribution': defaultdict(int),
+                'tech_stack_distribution': defaultdict(int),
+                'eligibility_stats': {
+                    'cgpa': {'min': float('inf'), 'max': 0, 'avg': 0},
+                    'amcat': {'min': float('inf'), 'max': 0, 'avg': 0}
+                },
+                'recent_jobs': []
+            }
+
+            total_cgpa = 0
+            total_amcat = 0
+            cgpa_count = 0
+            amcat_count = 0
+
+            for company in companies:
+                jobs = company.get('jobs', {})
+                num_jobs = len(jobs)
+                analytics_data['total_jobs'] += num_jobs
+
+                # Jobs per company
+                analytics_data['jobs_per_company'].append({
+                    'company_id': str(company['_id']),
+                    'company_name': company.get('companyName', 'N/A'),
+                    'job_count': num_jobs
+                })
+
+                for job_name, job_data in jobs.items():
+                    # Salary Distribution
+                    try:
+                        salary = float(job_data.get('Salary(LPA)', 0) or 0)
+                    except ValueError:
+                        salary = 0
+                    salary_range = f"{int(salary//5)*5}-{int(salary//5)*5+5}"
+                    analytics_data['salary_distribution'][salary_range] += 1
+
+                    # Tech Stack
+                    techs = job_data.get('Tech', [])
+                    if isinstance(techs, str):
+                        techs = [techs]
+                    for tech in techs:
+                        analytics_data['tech_stack_distribution'][tech] += 1
+
+                    # Eligibility
+                    eligibility = job_data.get('Eligibility', {})
+                    try:
+                        cgpa = float(eligibility.get('CGPA', 0) or 0)
+                    except ValueError:
+                        cgpa = 0
+                    if cgpa > 0:
+                        analytics_data['eligibility_stats']['cgpa']['min'] = min(
+                            analytics_data['eligibility_stats']['cgpa']['min'], cgpa)
+                        analytics_data['eligibility_stats']['cgpa']['max'] = max(
+                            analytics_data['eligibility_stats']['cgpa']['max'], cgpa)
+                        total_cgpa += cgpa
+                        cgpa_count += 1
+
+                    try:
+                        amcat = float(eligibility.get('Amcat', 0) or 0)
+                    except ValueError:
+                        amcat = 0
+                    if amcat > 0:
+                        analytics_data['eligibility_stats']['amcat']['min'] = min(
+                            analytics_data['eligibility_stats']['amcat']['min'], amcat)
+                        analytics_data['eligibility_stats']['amcat']['max'] = max(
+                            analytics_data['eligibility_stats']['amcat']['max'], amcat)
+                        total_amcat += amcat
+                        amcat_count += 1
+
+                    # Recent Jobs
+                    if 'posted_date' in job_data:
+                        posted_date = job_data['posted_date']
+                        if isinstance(posted_date, str):
+                            try:
+                                posted_date = datetime.fromisoformat(posted_date)
+                            except ValueError:
+                                posted_date = None
+                        if posted_date and (datetime.now() - posted_date).days <= 30:
+                            analytics_data['recent_jobs'].append({
+                                'company': company.get('companyName', 'N/A'),
+                                'job_title': job_name,
+                                'posted_date': posted_date.isoformat(),
+                                'salary': salary
+                            })
+
+            # Averages
+            if cgpa_count > 0:
+                analytics_data['eligibility_stats']['cgpa']['avg'] = round(total_cgpa / cgpa_count, 2)
+            if amcat_count > 0:
+                analytics_data['eligibility_stats']['amcat']['avg'] = round(total_amcat / amcat_count, 2)
+
+            # Cleanups
+            analytics_data['jobs_per_company'].sort(key=lambda x: x['job_count'], reverse=True)
+            analytics_data['salary_distribution'] = dict(analytics_data['salary_distribution'])
+            analytics_data['tech_stack_distribution'] = dict(analytics_data['tech_stack_distribution'])
+
+            return jsonify({
+                'status': 'success',
+                'data': analytics_data
+            })
+
+        except Exception as e:
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
 
 if __name__=="__main__":
     app.run(debug=True)    
